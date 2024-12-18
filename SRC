@@ -1,0 +1,69 @@
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Conjunto de dados de filmes
+filmes = {
+    'Filme': ['O Senhor dos Anéis', 'Harry Potter', 'Vingadores', 'O Rei Leão', 'Star Wars'],
+    'Gênero': ['Fantasia', 'Fantasia', 'Ação', 'Animação', 'Ficção Científica'],
+    'Avaliação Média': [4.7, 4.5, 4.6, 4.8, 4.9],
+    'Ano': [2001, 2001, 2012, 1994, 1977]
+}
+
+# Convertendo para DataFrame
+df_filmes = pd.DataFrame(filmes)
+
+# Conjunto de dados de usuários e suas avaliações (valores de 1 a 5)
+usuarios = {
+    'ID do Usuário': [1, 2, 3, 4],
+    'O Senhor dos Anéis': [5, 4, np.nan, 3],
+    'Harry Potter': [4, np.nan, 5, np.nan],
+    'Vingadores': [4, 5, 3, np.nan],
+    'O Rei Leão': [5, np.nan, 4, 4],
+    'Star Wars': [np.nan, 4, np.nan, 5]
+}
+
+# Convertendo para DataFrame
+df_usuarios = pd.DataFrame(usuarios).set_index('ID do Usuário')
+
+# Preenchendo os valores ausentes com 0 (uma forma simplificada de lidar com dados ausentes)
+df_usuarios = df_usuarios.fillna(0)
+
+# Função para calcular a similaridade de cosseno entre os usuários
+def calcular_similaridade(df):
+    return cosine_similarity(df)
+
+# Calculando a similaridade entre os usuários
+similaridade = calcular_similaridade(df_usuarios)
+
+# Transformando a matriz de similaridade em um DataFrame
+df_similaridade = pd.DataFrame(similaridade, index=df_usuarios.index, columns=df_usuarios.index)
+
+# Função para recomendar filmes com base na similaridade dos usuários
+def recomendar_filmes(usuario_id, df_usuarios, df_similaridade, n_recomendacoes=3):
+    # Obter as avaliações do usuário
+    usuario_avaliacoes = df_usuarios.loc[usuario_id]
+    
+    # Calcular a pontuação de recomendação para cada filme
+    pontuacoes = np.zeros(df_usuarios.shape[1])
+    for i, filme in enumerate(df_usuarios.columns):
+        if usuario_avaliacoes[filme] == 0:  # Se o filme ainda não foi avaliado
+            # Calcular a pontuação com base na similaridade
+            similaridade_usuario = df_similaridade[usuario_id]
+            pontuacao = np.dot(similaridade_usuario, df_usuarios[filme])
+            pontuacoes[i] = pontuacao
+    
+    # Criar um DataFrame com as pontuações e filmes
+    recomendacoes = pd.DataFrame(pontuacoes, index=df_usuarios.columns, columns=['Pontuação'])
+    recomendacoes = recomendacoes.sort_values(by='Pontuação', ascending=False)
+    
+    # Retornar os top N filmes recomendados
+    return recomendacoes.head(n_recomendacoes)
+
+# Exemplo de recomendação para o usuário 1
+usuario_id = 1
+recomendacoes = recomendar_filmes(usuario_id, df_usuarios, df_similaridade, n_recomendacoes=3)
+
+# Exibindo as recomendações
+print("Recomendações para o Usuário", usuario_id)
+print(recomendacoes)
